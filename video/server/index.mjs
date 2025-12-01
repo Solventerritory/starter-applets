@@ -20,7 +20,9 @@ import {checkProgress, promptVideo, uploadVideo} from './upload.mjs'
 const app = express()
 app.use(express.json())
 
-const upload = multer({dest: '/tmp/'})
+// Allow configuring the temporary uploads directory (some hosts restrict /tmp)
+const tmpDir = process.env.VIDEO_UPLOAD_TMP_DIR || '/tmp/'
+const upload = multer({dest: tmpDir})
 app.post('/api/upload', upload.single('video'), async (req, res) => {
   try {
     const file = req.file
