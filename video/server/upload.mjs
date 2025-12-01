@@ -88,7 +88,7 @@ export const checkProgress = async fileId => {
     return result
   } catch (error) {
     console.error('checkProgress errored:', error)
-    return {error: error?.message || String(error)}
+    throw error
   }
 }
 
