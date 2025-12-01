@@ -112,6 +112,6 @@ export const promptVideo = async (uploadResult, prompt, model) => {
     }
   } catch (error) {
     console.error('promptVideo errored:', error)
-    return {error: error?.message || String(error)}
+    throw error
   }
 }
