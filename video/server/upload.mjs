@@ -16,14 +16,41 @@ import {GoogleGenerativeAI} from '@google/generative-ai'
 import {GoogleAIFileManager} from '@google/generative-ai/server'
 
 const key = process.env.VITE_GEMINI_API_KEY
+
+if (!key) {
+  // Fail fast with a clear message so deployments without a key don't silently
+  // accept uploads then fail later.
+  console.error('VITE_GEMINI_API_KEY is missing from environment variables')
+  throw new Error('VITE_GEMINI_API_KEY is not set on the server')
+}
+
 const fileManager = new GoogleAIFileManager(key)
 const genAI = new GoogleGenerativeAI(key)
 
 export const uploadVideo = async file => {
   try {
+    // Basic validation: ensure the incoming file looks like a video and has a
+    // filename. This avoids uploading unsupported files (or empty bodies) to
+    // the file manager which will fail later and is harder to debug.
+    if (!file || !file.path || !file.originalname) {
+      const msg = 'Missing file or invalid upload payload (file.path or originalname)'
+      console.error(msg, file)
+      throw new Error(msg)
+    }
+
+    // Prefer explicit video MIME types; multer may sometimes set generic
+    // application/octet-stream depending on environment. Only allow common
+    // video types for now.
+    const mimeType = file.mimetype || 'application/octet-stream'
+    if (!mimeType.startsWith('video/')) {
+      const msg = `Unsupported mimeType: ${mimeType}. Expected a video/* type.`
+      console.error(msg)
+      throw new Error(msg)
+    }
+
     const uploadResult = await fileManager.uploadFile(file.path, {
       displayName: file.originalname,
-      mimeType: file.mimetype
+      mimeType: mimeType
     })
     return uploadResult.file
   } catch (error) {
@@ -37,8 +64,8 @@ export const checkProgress = async fileId => {
     const result = await fileManager.getFile(fileId)
     return result
   } catch (error) {
-    console.error(error)
-    return {error}
+    console.error('checkProgress errored:', error)
+    return {error: error?.message || String(error)}
   }
 }
 
@@ -61,7 +88,7 @@ export const promptVideo = async (uploadResult, prompt, model) => {
       feedback: result.response.promptFeedback
     }
   } catch (error) {
-    console.error(error)
-    return {error}
+    console.error('promptVideo errored:', error)
+    return {error: error?.message || String(error)}
   }
 }

@@ -27,7 +27,9 @@ app.post('/api/upload', upload.single('video'), async (req, res) => {
     const resp = await uploadVideo(file)
     res.json({data: resp})
   } catch (error) {
-    res.status(500).json({error})
+    // Error can be an Error object; return a structured JSON message to the client
+    console.error('/api/upload error:', error)
+    res.status(500).json({error: error?.message || String(error)})
   }
 })
 
@@ -50,7 +52,8 @@ app.post('/api/prompt', async (req, res) => {
     )
     res.json(videoResponse)
   } catch (error) {
-    res.json({error}, {status: 400})
+    console.error('/api/prompt error:', error)
+    res.status(400).json({error: error?.message || String(error)})
   }
 })
 
